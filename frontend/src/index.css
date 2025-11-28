@@ -1,0 +1,1128 @@
+/* ============================
+   TAILWIND SETUP (REQUIRED!)
+=============================== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================
+   GLOBAL RESETS & BASE
+=============================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  background: #fffaf7;
+  font-family: "Inter", "Poppins", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* BASIC */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ============================
+   NAVBAR STYLES
+=============================== */
+.navbar {
+  height: 70px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Logo */
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  padding: 6px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.brand-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  background: linear-gradient(90deg,#3a7cfb,#7648ff,#ff3f97,#ff8a3c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Menu links */
+.navbar-center {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+}
+
+.navbar-link {
+  font-weight: 600;
+  font-size: 1rem;
+  position: relative;
+  background: linear-gradient(90deg,#3a7cfb,#7648ff,#ff3f97,#ff623a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* underline on hover */
+.navbar-link::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg,#fb923c,#f472b6,#c084fc);
+  transition: 0.25s;
+}
+.navbar-link:hover::after {
+  width: 100%;
+}
+
+/* Right side */
+.navbar-right {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.nav-link-plain {
+  font-weight: 600;
+  color: #111;
+}
+
+.nav-cta {
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: linear-gradient(90deg,#fb923c,#f472b6,#c084fc);
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+/* Avatar */
+.profile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 1.1rem;
+  font-weight: 800;
+
+  background: linear-gradient(135deg,#c084fc,#f472b6,#fb923c);
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ============================
+   ANALYSIS PAGE MAIN LAYOUT
+=============================== */
+.analysis-page {
+  padding: 30px 20px;
+  min-height: calc(100vh - 70px);
+  text-align: center;
+}
+
+.analysis-title {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #a855f7;
+}
+
+.analysis-sub {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-bottom: 30px;
+}
+
+.analysis-main-card {
+  background: #fff;
+  max-width: 1100px;
+  padding: 40px;
+  margin: 0 auto;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+/* ============================
+   AUDIO RECORDER / UPLOADER
+=============================== */
+
+.analysis-card {
+  background: #fff;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.small-title {
+  color: #f472b6;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, #a855f7,#6366f1);
+  padding: 10px 16px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 700;
+}
+
+.btn-stop {
+  background: #ef4444;
+  padding: 10px 16px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 700;
+}
+
+.btn-remove {
+  background: #dc2626;
+  padding: 8px 12px;
+  color: white;
+  border-radius: 8px;
+}
+
+/* Waveform bars */
+.waveform {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  height: 50px;
+  margin: 12px 0;
+}
+
+/* Progress bar */
+.progress-container {
+  margin-top: 10px;
+  height: 7px;
+  border-radius: 6px;
+  background: #eee;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg,#fb923c,#f472b6);
+}
+
+/* ============================
+   ANALYZE BTN
+=============================== */
+.analyze-btn {
+  padding: 12px 26px;
+  border-radius: 12px;
+  background: linear-gradient(90deg,#7c3aed,#3b82f6);
+  color: white;
+  font-weight: 800;
+  font-size: 1.1rem;
+  box-shadow: 0 10px 26px rgba(59,130,246,0.25);
+}
+
+/* ============================
+   RESULTS
+=============================== */
+.result-card-ui {
+  background: #fff;
+  padding: 28px;
+  border-radius: 16px;
+  max-width: 500px;
+  margin: 0 auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+/* ============================
+   HISTORY
+=============================== */
+.history-list-item {
+  background: #fff7ff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+/* PROFILE POPUP LAYOUT FIXES */
+.profile-popup-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-popup-name {
+  font-weight: 800;
+  color: var(--text, #0f1724);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.profile-popup-email {
+  color: var(--muted, #6b7280);
+  font-size: 0.9rem;
+}
+
+/* Ensure items are block so they stack and get spacing */
+.profile-popup-item {
+  display: block;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  margin-top: 6px;
+}
+
+/* mobile logout style */
+.mobile-logout {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(90deg,#fb923c,#f472b6);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+}
+/* ---------------- NAVBAR ---------------- */
+.navbar {
+  width: 100%;
+  padding: 15px 30px;
+  background: white;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.brand-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #a855f7;
+  text-decoration: none;
+}
+
+/* Navbar Links */
+.navbar-link {
+  margin: 0 15px;
+  text-decoration: none;
+  font-weight: 600;
+  color: #555;
+}
+
+.navbar-link:hover {
+  color: #a855f7;
+}
+
+/* Login / Signup */
+.nav-cta {
+  background: #a855f7;
+  padding: 8px 16px;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.nav-link-plain {
+  margin-right: 10px;
+  text-decoration: none;
+  color: #555;
+}
+
+/* AVATAR */
+.profile-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #a855f7;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* POPUP */
+.profile-popup {
+  position: absolute;
+  top: 60px;
+  right: 30px;
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  width: 240px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.profile-popup-item {
+  display: block;
+  padding: 8px 10px;
+  text-decoration: none;
+  color: #444;
+  font-weight: 500;
+}
+
+.profile-popup-item:hover {
+  background: #f3e8ff;
+  border-radius: 6px;
+}
+
+.profile-popup-logout {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  background: #ef4444;
+  color: white;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+}
+
+/* MOBILE MENU */
+.hamburger {
+  display: none;
+  cursor: pointer;
+}
+
+.hamburger span {
+  display: block;
+  width: 28px;
+  height: 3px;
+  margin: 5px;
+  background: #333;
+}
+
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  background: white;
+  width: 240px;
+  height: 100vh;
+  padding: 40px 20px;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-menu a {
+  margin: 12px 0;
+  text-decoration: none;
+  font-weight: 600;
+  color: #444;
+}
+
+.mobile-logout {
+  margin-top: 20px;
+  padding: 10px;
+  background: #ef4444;
+  color: white;
+  border-radius: 8px;
+  border: none;
+}
+
+/* FOOTER */
+.footer {
+  background: #f9f1ff;
+  padding: 40px 20px;
+  margin-top: 60px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+  gap: 20px;
+}
+
+.footer-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #a855f7;
+}
+
+.footer-text {
+  color: #777;
+}
+
+.footer-sub {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.footer-link {
+  display: block;
+  color: #555;
+  margin-bottom: 6px;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: #a855f7;
+}
+
+.footer-bottom {
+  text-align: center;
+  margin-top: 20px;
+  color: #888;
+  font-size: 14px;
+}
+
+/* THERAPY CARDS */
+.therapy-page {
+  padding: 60px;
+}
+
+.therapy-grid {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
+  gap: 30px;
+}
+
+.therapy-card {
+  padding: 25px;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.therapy-btn {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 18px;
+  background: #a855f7;
+  color: white;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* PROFILE PAGE */
+.profile-page {
+  padding: 60px;
+}
+
+.profile-cover {
+  background: linear-gradient(to right,#c084fc,#a855f7);
+  padding: 50px 30px;
+  border-radius: 20px;
+  text-align: center;
+  color: white;
+}
+
+.profile-avatar-large {
+  width: 80px;
+  height: 80px;
+  background: white;
+  color: #a855f7;
+  border-radius: 50%;
+  font-size: 32px;
+  font-weight: 700;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.profile-info-card {
+  margin-top: 30px;
+  padding: 30px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+/* SETTINGS */
+.settings-page {
+  padding: 60px;
+}
+
+.settings-card {
+  padding: 25px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.switch input {
+  display: none;
+}
+
+.switch .slider {
+  width: 40px;
+  height: 20px;
+  background: #bbb;
+  border-radius: 20px;
+  display: inline-block;
+  cursor: pointer;
+}
+
+/* HELP */
+.help-page,
+.contact-page,
+.about-page {
+  padding: 60px;
+}
+
+.help-card,
+.contact-card,
+.about-card {
+  padding: 30px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+}
+
+.faq-item summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 10px 0;
+}
+/* =========================
+   SMALL EXTENSIONS (append)
+   - forms, modals, therapy subpages
+========================= */
+
+.therapy-subpage {
+  padding: 48px;
+  min-height: 60vh;
+}
+.therapy-subpage-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  padding: 28px;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(13,12,35,0.04);
+}
+.therapy-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+.therapy-step {
+  background: #fffafa;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(168,85,247,0.06);
+}
+.therapy-resources { margin-top: 18px; display:flex; gap:12px; flex-wrap:wrap; }
+.therapy-btn.ghost { background: transparent; color: #6b7280; border: 1px solid #eee; box-shadow:none; }
+.practice-list { margin-top: 16px; padding-left: 18px; color: #333; }
+
+/* Contact form */
+.contact-form-card { margin-top: 24px; padding: 20px; max-width:700px; }
+.form-input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px solid #e6e6f0;
+  box-shadow: none;
+  font-size: 15px;
+}
+
+/* Help/FAQ item */
+.faq-item { background: white; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
+.faq-item summary { outline: none; cursor: pointer; font-weight:700; }
+.faq-item p { margin-top: 8px; color: #555; }
+
+/* small utility */
+.muted { color: #6b7280; }
+
+/* modal skeleton (if you use modal later) */
+.modal-overlay {
+  position: fixed; inset: 0; display:flex; align-items:center; justify-content:center;
+  background: rgba(2,6,23,0.5); z-index: 2000;
+}
+.modal-card {
+  width: 90%; max-width: 720px; background:white; padding:20px; border-radius:12px;
+  box-shadow: 0 8px 30px rgba(2,6,23,0.12);
+}
+/* =====================================
+   UNIVERSAL PAGE WRAPPER (MATCH HOME UI)
+===================================== */
+
+.page-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Centered section titles like Home hero */
+.page-title {
+  font-size: 2.4rem;
+  font-weight: 800;
+  text-align: center;
+  background: linear-gradient(90deg,#7c3aed,#c084fc,#f472b6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
+}
+
+.page-sub {
+  text-align: center;
+  color: #6b7280;
+  font-size: 1.1rem;
+  margin-bottom: 30px;
+}
+
+/* Universal white card like home */
+.page-card {
+  background: #ffffff;
+  padding: 28px;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+  border: 1px solid rgba(196,132,252,0.10);
+  margin-bottom: 30px;
+}
+
+/* Grid layout that matches Home grid */
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+}
+
+/* Contact / About / Therapy info blocks */
+.info-block {
+  background: #ffffff;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.05);
+  border: 1px solid rgba(196,132,252,0.08);
+}
+
+.info-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+.info-text {
+  margin-top: 6px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* Buttons same style as Analyze Speech (but small) */
+.page-btn {
+  display: inline-block;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: linear-gradient(90deg,#7c3aed,#4f46e5);
+  color: #ffffff;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 14px;
+  transition: 0.2s;
+}
+
+.page-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+/* =====================================
+   CONTACT PAGE SPECIAL
+===================================== */
+
+.contact-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.contact-item {
+  background: #fff;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 10px 34px rgba(0,0,0,0.06);
+  border: 1px solid rgba(196,132,252,0.08);
+}
+
+.contact-label {
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+.contact-value {
+  margin-top: 4px;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+/* Form fields */
+.contact-input {
+  width: 100%;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+
+.contact-input:focus {
+  border-color: #c084fc;
+  box-shadow: 0 0 8px rgba(192,132,252,0.4);
+}
+
+/* =====================================
+   THERAPY PAGE MATCHING HOME STYLE
+===================================== */
+
+.therapy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 26px;
+}
+
+.therapy-card {
+  background: #ffffff;
+  padding: 26px;
+  border-radius: 20px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.06);
+  border: 1px solid rgba(196,132,252,0.10);
+  transition: 0.2s ease;
+}
+
+.therapy-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.10);
+}
+
+.therapy-card-title {
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: #4c1d95;
+  margin-bottom: 10px;
+}
+
+.therapy-card-desc {
+  color: #6b7280;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.therapy-btn {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: linear-gradient(90deg,#c084fc,#f472b6);
+  color: white;
+  font-weight: 700;
+  transition: 0.2s;
+}
+.therapy-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+}
+
+/* =====================================
+   ABOUT PAGE UI
+===================================== */
+
+.about-text {
+  color: #475569;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+
+/* =====================================
+   HELP PAGE UI
+===================================== */
+
+.faq-item {
+  background: #fff;
+  padding: 16px;
+  border-radius: 14px;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.05);
+  border: 1px solid rgba(196,132,252,0.08);
+}
+
+.faq-item summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.faq-item p {
+  margin-top: 10px;
+  color: #475569;
+}
+/* ===========================
+   THERAPY DETAIL PAGE (CENTERED)
+=========================== */
+
+.page-wrapper {
+  max-width: 850px;
+  margin: 40px auto;
+  padding: 20px;
+  text-align: center;
+}
+
+.page-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+}
+
+.page-sub {
+  color: var(--muted);
+  font-size: 1.1rem;
+  margin-bottom: 28px;
+}
+
+.page-card {
+  background: #fff;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.08);
+  border: 1px solid rgba(196,132,252,0.08);
+  text-align: left;
+  max-width: 650px;
+  margin: auto;
+}
+
+.info-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent-3);
+  margin-bottom: 10px;
+}
+
+.info-list {
+  padding-left: 20px;
+  margin-bottom: 20px;
+}
+
+.info-list li {
+  font-size: 1rem;
+  color: #444;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.info-text {
+  color: #555;
+  line-height: 1.6;
+  font-size: 1rem;
+  margin-top: 10px;
+}
+
+.therapy-detail-page {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 20px;
+  text-align: center;
+}
+
+.therapy-detail-title {
+  font-size: 2rem;
+  font-weight: 800;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.therapy-detail-sub {
+  color: #6b7280;
+  font-size: 1rem;
+  margin-top: 6px;
+  margin-bottom: 24px;
+}
+
+.therapy-detail-card {
+  background: #fff;
+  padding: 26px;
+  border-radius: 18px;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.06);
+  border: 1px solid rgba(196,132,252,0.08);
+  text-align: left;
+}
+
+.section-header {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.detail-list {
+  padding-left: 20px;
+  line-height: 1.7;
+  font-size: 1rem;
+  color: #444;
+}
+
+.detail-list li {
+  margin-bottom: 12px;
+}
+.highlight-sub {
+  font-size: 1.15rem;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 12px;
+  display: inline-block;
+  background: linear-gradient(90deg, #fff1f9, #f3e7ff);
+  color: #7b2ff7;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid rgba(196,132,252,0.12);
+  margin-bottom: 24px;
+}
+
+/* PAGE WRAPPER */
+.page-wrapper {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+/* TITLE */
+.page-title {
+  font-size: 38px;
+  font-weight: 800;
+  color: #a855f7;
+}
+
+/* SUBTITLE HIGHLIGHT */
+.highlight-sub {
+  margin-top: 6px;
+  font-size: 16px;
+  color: #6b7280;
+  background: #f8e9ff;
+  padding: 8px 20px;
+  display: inline-block;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+/* MAIN CARD */
+.settings-card-pro {
+  margin-top: 40px;
+  max-width: 650px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 35px;
+  background: #ffffff;
+  border-radius: 22px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+  border: 1px solid rgba(168,85,247,0.12);
+}
+
+/* ROW */
+.settings-row-pro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4b5563;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.settings-row-pro:last-child {
+  border-bottom: none;
+}
+
+/* SELECT DROPDOWN */
+.settings-select-pro {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background: white;
+  font-weight: 500;
+  outline: none;
+  min-width: 170px;
+}
+
+.settings-select-pro:hover {
+  border-color: #a855f7;
+}
+
+/* MODERN SWITCH */
+.switch-pro {
+  position: relative;
+  width: 50px;
+  height: 26px;
+  cursor: pointer;
+}
+
+.switch-pro input {
+  display: none;
+}
+
+.slider-pro {
+  position: absolute;
+  inset: 0;
+  background: #d1d5db;
+  border-radius: 26px;
+  transition: 0.3s ease;
+}
+
+.slider-pro:before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+/* ON STATE */
+.switch-pro input:checked + .slider-pro {
+  background: linear-gradient(90deg,#a855f7,#6366f1);
+}
+
+.switch-pro input:checked + .slider-pro:before {
+  transform: translateX(24px);
+}
