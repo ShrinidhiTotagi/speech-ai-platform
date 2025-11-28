@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+transformers
+torchaudio
+soundfile
+librosa
+numpy
+pydantic
+python-multipart
+pymongo
+gunicorn
+PyJWT
+bcrypt
+python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]
