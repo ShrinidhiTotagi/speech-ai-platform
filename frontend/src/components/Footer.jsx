@@ -21,8 +21,8 @@ export default function Footer() {
 
         <div>
           <div className="footer-sub">Contact</div>
-          <div className="footer-text">support@stutterai.com</div>
-          <div className="footer-text">+1 (555) 123-4567</div>
+          <div className="footer-text">shrinidhitotagi@gmail.com</div>
+          <div className="footer-text">+91 8310051575</div>
         </div>
 
         <div>

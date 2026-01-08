@@ -1,51 +1,124 @@
-// src/pages/Login.jsx
 import React, { useState } from "react";
-import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext";
+import "../index.css";
+
+// Backend API
+const API = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
 
 export default function Login() {
-  const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { login, googleLogin } = useAuth(); // ✅ IMPORTANT
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    const res = await login(email, password);
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+  });
 
-    if (res.success) {
-      toast.success("Logged in");
-      navigate("/");
-    } else {
-      toast.error(res.message);
+  // ================= EMAIL LOGIN =================
+  const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const result = await login(form.email, form.password);
+
+      if (result.success) {
+        navigate("/dashboard");
+      } else {
+        alert(result.message || "Login failed");
+      }
+    } catch {
+      alert("Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ================= GOOGLE LOGIN =================
+  const handleGoogleLogin = async (googleIdToken) => {
+    try {
+      const res = await axios.post(
+        `${API}/auth/google`,
+        { token: googleIdToken },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      // ✅ UPDATE AUTH CONTEXT (THIS FIXES REDIRECT)
+      googleLogin(res.data.token);
+
+      // ✅ NOW REDIRECT WORKS
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("GOOGLE LOGIN ERROR:", err.response || err);
+      alert(err.response?.data?.detail || "Google login failed");
+    }
+  };
+
+  // ================= UI =================
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h2 className="text-2xl font-semibold mb-4">Login</h2>
+    <div className="auth-container">
+      <div className="auth-box">
+        <h1 className="auth-title">Welcome Back</h1>
+        <p className="auth-sub">Choose a method to sign in</p>
 
-      <input
-        value={email}
-        onChange={(e)=>setEmail(e.target.value)}
-        placeholder="Email"
-        className="w-full p-2 border rounded mb-3"
-      />
+        {/* GOOGLE LOGIN */}
+        <GoogleLogin
+          onSuccess={(response) => {
+            if (!response.credential) {
+              alert("No Google credential received");
+              return;
+            }
+            handleGoogleLogin(response.credential);
+          }}
+          onError={() => alert("Google login popup error")}
+        />
 
-      <input
-        value={password}
-        onChange={(e)=>setPassword(e.target.value)}
-        placeholder="Password"
-        type="password"
-        className="w-full p-2 border rounded mb-3"
-      />
+        <div className="divider">
+          <span>OR</span>
+        </div>
 
-      <button
-        onClick={handleLogin}
-        className="w-full py-2 bg-indigo-500 text-white rounded"
-      >
-        Login
-      </button>
+        {/* EMAIL LOGIN */}
+        <form onSubmit={handleEmailLogin}>
+          <input
+            type="email"
+            className="auth-input"
+            placeholder="Email"
+            value={form.email}
+            onChange={(e) =>
+              setForm({ ...form, email: e.target.value })
+            }
+            required
+          />
+
+          <input
+            type="password"
+            className="auth-input"
+            placeholder="Password"
+            value={form.password}
+            onChange={(e) =>
+              setForm({ ...form, password: e.target.value })
+            }
+            required
+          />
+
+          <button
+            type="submit"
+            className="auth-btn"
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+
+        <p className="auth-footer">
+          Don&apos;t have an account?{" "}
+          <a href="/signup">Create one</a>
+        </p>
+      </div>
     </div>
   );
 }

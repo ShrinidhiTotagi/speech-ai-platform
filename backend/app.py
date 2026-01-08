@@ -1,9 +1,9 @@
-# backend/app.py
 import os
 import io
 import random
 import logging
 from datetime import datetime
+import uuid
 
 import numpy as np
 import torch
@@ -13,186 +13,178 @@ import ffmpeg
 
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 import uvicorn
 from dotenv import load_dotenv
+from bson import ObjectId
 
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+
+# ================= LOAD ENV =================
 load_dotenv()
 
-# keep your existing imports for DB/auth/model loader
-# they should be present in your project: database.py, auth.py, model_loader.py
+# ================= PROJECT IMPORTS =================
 from database import history_collection
 from auth import router as auth_router, get_current_user
+from contact import router as contact_router   # ✅ CONTACT ROUTER
 from model_loader import load_model_robust
 
-# -----------------------------------------------------
+# ================= LOGGING =================
 logger = logging.getLogger("stutter-api")
 logging.basicConfig(level=logging.INFO)
 
+# ================= MODEL LOAD =================
 MODEL_PATH = os.environ.get("MODEL_PATH", "./models/model_epoch10.pth")
 DEVICE = os.environ.get("DEVICE", "cpu")
 
 logger.info(f"Loading model from: {MODEL_PATH}")
 model = load_model_robust(MODEL_PATH, device=DEVICE)
+
 if model is None:
-    logger.warning("No model loaded; running fallback predictions")
+    logger.warning("No model loaded, using fallback logic")
 else:
     logger.info("MODEL LOADED SUCCESSFULLY")
 
+# ================= FASTAPI APP =================
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # frontend: http://127.0.0.1:3000
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
-# ---------------- audio / mel config ----------------
+# ================= ROUTERS =================
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(contact_router, tags=["contact"])   # ✅ THIS WAS REQUIRED
+
+# ================= AUDIO CONFIG =================
 SR = 16000
 TARGET_LEN = 24000
 N_MELS = 64
 N_FFT = 1024
 HOP_LEN = 256
 
-# ---------------- audio decoder ----------------
+# ================= AUDIO DECODER =================
 def audio_bytes_to_np(raw: bytes):
-    """
-    Attempt multiple decodes for uploaded audio bytes:
-     1) soundfile (wav/ogg/flac)
-     2) ffmpeg -> wav (handles webm/opus/mp4/m4a/etc)
-     3) librosa fallback (rare)
-    Returns mono float32 waveform resampled to SR.
-    Raises HTTPException(400) on failure.
-    """
     if not raw or len(raw) < 10:
-        raise ValueError("Empty audio bytes")
+        raise HTTPException(status_code=400, detail="Empty audio")
 
-    # 1) try soundfile (fast for WAV/OGG/FLAC)
     try:
-        bio = io.BytesIO(raw)
-        y, sr = sf.read(bio, dtype="float32")
+        y, sr = sf.read(io.BytesIO(raw), dtype="float32")
         if y.ndim > 1:
-            # convert to mono
             y = np.mean(y, axis=1)
         if sr != SR:
-            y = librosa.resample(y, orig_sr=sr, target_sr=SR)
-        return y.astype(np.float32)
+            y = librosa.resample(y, sr, SR)
+        return y
     except Exception:
-        logger.debug("soundfile direct decode failed; trying ffmpeg fallback")
+        pass
 
-    # 2) ffmpeg fallback - convert any container to wav PCM
     try:
-        # ffmpeg-python: feed raw bytes in, get wav bytes out
-        out, err = (
-            ffmpeg
-            .input("pipe:")
+        out, _ = (
+            ffmpeg.input("pipe:")
             .output("pipe:", format="wav", acodec="pcm_s16le", ac=1, ar=str(SR))
             .run(input=raw, capture_stdout=True, capture_stderr=True, quiet=True)
         )
-        bio = io.BytesIO(out)
-        y, sr = sf.read(bio, dtype="float32")
-        if y.ndim > 1:
-            y = np.mean(y, axis=1)
-        if sr != SR:
-            y = librosa.resample(y, orig_sr=sr, target_sr=SR)
-        return y.astype(np.float32)
-    except Exception as e:
-        logger.debug("ffmpeg decode failed: %s", e)
+        y, _ = sf.read(io.BytesIO(out), dtype="float32")
+        return y
+    except Exception:
+        raise HTTPException(status_code=400, detail="Unsupported audio format")
 
-    # 3) librosa fallback (may still rely on soundfile internally)
-    try:
-        y, sr = librosa.load(io.BytesIO(raw), sr=None, mono=True)
-        if sr != SR:
-            y = librosa.resample(y, orig_sr=sr, target_sr=SR)
-        return y.astype(np.float32)
-    except Exception as e:
-        logger.exception("All decoding attempts failed")
-        raise HTTPException(status_code=400, detail="Invalid or unsupported audio format")
-
-# ---------------- helpers ----------------
-def ensure_length(y, target=TARGET_LEN):
-    if len(y) < target:
-        return np.pad(y, (0, target - len(y)))
-    return y[:target]
+# ================= HELPERS =================
+def ensure_length(y):
+    return np.pad(y, (0, max(0, TARGET_LEN - len(y))))[:TARGET_LEN]
 
 def mel_from_wave(y):
-    """Return mel spectrogram (n_mels, time) as float32."""
     y = ensure_length(y)
-    m = librosa.feature.melspectrogram(
+    mel = librosa.feature.melspectrogram(
         y=y, sr=SR, n_mels=N_MELS, n_fft=N_FFT, hop_length=HOP_LEN
     )
-    m_db = librosa.power_to_db(m, ref=np.max)
-    return m_db.astype(np.float32)
+    return librosa.power_to_db(mel, ref=np.max).astype(np.float32)
 
-# ---------------- health ----------------
+# ================= PDF GENERATOR =================
+def generate_pdf_report(result: dict, filepath: str):
+    c = canvas.Canvas(filepath, pagesize=A4)
+    width, height = A4
+    y = height - 2 * cm
+
+    c.setFont("Helvetica-Bold", 20)
+    c.drawCentredString(width / 2, y, "FLUENCY ASSIST – ANALYSIS REPORT")
+
+    y -= 1.5 * cm
+    c.setFont("Helvetica", 11)
+    c.drawString(2 * cm, y, f"Email: {result['email']}")
+    y -= 0.6 * cm
+    c.drawString(2 * cm, y, f"File: {result['filename']}")
+    y -= 0.6 * cm
+    c.drawString(2 * cm, y, f"Date: {result['timestamp']}")
+
+    y -= 1.2 * cm
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(2 * cm, y, "Result Summary")
+
+    y -= 0.8 * cm
+    c.setFont("Helvetica", 12)
+    c.drawString(2 * cm, y, f"Status: {result['status']}")
+    y -= 0.6 * cm
+    c.drawString(2 * cm, y, f"Confidence: {result['confidence']}%")
+
+    y -= 1 * cm
+    c.setFont("Helvetica-Bold", 13)
+    c.drawString(2 * cm, y, "Details")
+    y -= 0.6 * cm
+    c.setFont("Helvetica", 11)
+    c.drawString(2 * cm, y, result["details"])
+
+    y -= 1 * cm
+    c.setFont("Helvetica-Bold", 13)
+    c.drawString(2 * cm, y, "Speech Breakdown (%)")
+
+    y -= 0.7 * cm
+    c.setFont("Helvetica", 11)
+    for k, v in result["breakdown"].items():
+        c.drawString(2.5 * cm, y, f"{k.capitalize()}: {v}%")
+        y -= 0.5 * cm
+
+    c.setFont("Helvetica-Oblique", 9)
+    c.drawCentredString(width / 2, 1.5 * cm, "Generated by Fluency Assist")
+    c.showPage()
+    c.save()
+
+# ================= HEALTH =================
 @app.get("/health")
 def health():
     return {"status": "ok", "model_loaded": model is not None}
 
-# ---------------- predict ----------------
+# ================= PREDICT =================
 @app.post("/predict")
-async def predict_audio(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+async def predict_audio(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
     raw = await file.read()
+    y = audio_bytes_to_np(raw)
+    mel = mel_from_wave(y)
+    mel_tensor = torch.tensor(mel).unsqueeze(0).unsqueeze(0)
 
-    if not raw or len(raw) < 10:
-        raise HTTPException(status_code=400, detail="Empty or invalid file uploaded")
-
-    try:
-        y = audio_bytes_to_np(raw)
-    except HTTPException:
-        # bubble up client error
-        raise
-    except Exception as e:
-        logger.exception("Audio decode failed")
-        raise HTTPException(status_code=400, detail="Invalid audio file")
-
-    # build mel
-    mel = mel_from_wave(y)  # shape: (n_mels, time)
-
-    # prepare tensor - ensure 4D tensor for conv2d: (B, C, H, W)
-    # Common shapes: (1,1,n_mels,time) or (1,1,time,n_mels). We'll default to (1,1,n_mels,time).
-    mel_tensor = torch.tensor(mel).unsqueeze(0).unsqueeze(0)  # (1,1,n_mels,time)
-
-    # MODEL PREDICTION
     if model is None:
-        conf = float(random.uniform(55, 95))
+        conf = random.uniform(55, 95)
         label = "Stuttering Detected" if conf > 70 else "Normal Speech"
     else:
-        model.eval()
         with torch.no_grad():
-            try:
-                logits = model(mel_tensor.to(next(model.parameters()).device if next(model.parameters(), None) is not None else "cpu"))
-            except RuntimeError as e:
-                # Try transposed shape if model expects time x mel
-                logger.warning("Model forward failed with shape %s: %s. Trying permuted tensor.", list(mel_tensor.shape), e)
-                try:
-                    perm = mel_tensor.permute(0, 1, 3, 2).contiguous()
-                    logits = model(perm.to(next(model.parameters()).device if next(model.parameters(), None) is not None else "cpu"))
-                except Exception as e2:
-                    logger.exception("Model failed on both shapes")
-                    raise HTTPException(status_code=500, detail="Model forward error")
-            probs = torch.softmax(logits, dim=1)
-            # safe: if model outputs fewer classes ensure indexing
-            idx = 1 if probs.shape[1] > 1 else 0
-            conf = float(probs[0][idx].item() * 100)
+            probs = torch.softmax(model(mel_tensor), dim=1)
+            conf = float(probs[0][1] * 100)
             label = "Stuttering Detected" if conf > 50 else "Normal Speech"
 
-    # BREAKDOWN LOGIC (mock if you don't have a per-frame breakdown)
-    if label == "Stuttering Detected":
-        rep = random.randint(5, 30)
-        prog = random.randint(5, 30)
-        blk = random.randint(0, 20)
-        normal = max(0, 100 - (rep + prog + blk))
-        breakdown = {"normal": int(normal), "repetition": int(rep), "prolongation": int(prog), "block": int(blk)}
-        dom = max(breakdown, key=breakdown.get)
-        details = f"Detected {dom.capitalize()} in the uploaded recording."
-    else:
-        breakdown = {"normal": 100, "repetition": 0, "prolongation": 0, "block": 0}
-        details = "Speech appears normal."
+    breakdown = {"normal": 100, "repetition": 0, "prolongation": 0, "block": 0}
+    details = "Speech appears normal."
 
-    result_doc = {
-        "email": current_user.get("email"),
+    doc = {
+        "email": current_user["email"],
         "filename": file.filename,
         "status": label,
         "confidence": round(conf, 2),
@@ -201,41 +193,51 @@ async def predict_audio(file: UploadFile = File(...), current_user: dict = Depen
         "timestamp": datetime.utcnow(),
     }
 
-    try:
-        if history_collection is not None:
-            res = history_collection.insert_one(result_doc)
-            result_doc["_id"] = str(res.inserted_id)
-    except Exception as e:
-        logger.warning("Failed to save record: %s", e)
+    res = history_collection.insert_one(doc)
+    doc["_id"] = str(res.inserted_id)
+    doc["timestamp"] = doc["timestamp"].isoformat()
 
-    out = result_doc.copy()
-    out["timestamp"] = out["timestamp"].isoformat()
+    return {"result": doc}
 
-    return {"result": out}
-
-# ---------------- history ----------------
+# ================= HISTORY =================
 @app.get("/history")
 def get_history(current_user: dict = Depends(get_current_user)):
-    if history_collection is None:
-        raise HTTPException(status_code=500, detail="DB not available")
-
-    email = current_user.get("email")
-    docs = list(history_collection.find({"email": email}).sort("timestamp", -1))
-
-    out = []
+    docs = list(
+        history_collection.find({"email": current_user["email"]}).sort("timestamp", -1)
+    )
     for d in docs:
         d["_id"] = str(d["_id"])
-        if isinstance(d.get("timestamp"), datetime):
-            d["timestamp"] = d["timestamp"].isoformat()
-        out.append(d)
+        d["timestamp"] = d["timestamp"].isoformat()
+    return {"history": docs}
 
-    return {"history": out}
+# ================= PDF DOWNLOAD =================
+@app.get("/download-report/{report_id}")
+def download_report(report_id: str, current_user: dict = Depends(get_current_user)):
+    record = history_collection.find_one({
+        "_id": ObjectId(report_id),
+        "email": current_user["email"],
+    })
 
-# ---------------- run ----------------
+    if not record:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    record["timestamp"] = record["timestamp"].isoformat()
+    os.makedirs("reports", exist_ok=True)
+    pdf_path = f"reports/fluency_report_{uuid.uuid4().hex}.pdf"
+
+    generate_pdf_report(record, pdf_path)
+
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename="Fluency_Assist_Report.pdf",
+    )
+
+# ================= RUN =================
 if __name__ == "__main__":
     uvicorn.run(
         "app:app",
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 8000)),
+        port=8000,
         reload=True,
     )

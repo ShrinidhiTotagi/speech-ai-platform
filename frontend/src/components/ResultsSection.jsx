@@ -1,5 +1,4 @@
-// src/components/ResultsSection.jsx
-import React, { useState } from "react";
+import React from "react";
 import { Pie, Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -8,12 +7,9 @@ import {
   Legend,
   CategoryScale,
   LinearScale,
-  BarElement
+  BarElement,
 } from "chart.js";
 
-import "../index.css";
-
-// Register charts
 ChartJS.register(
   ArcElement,
   Tooltip,
@@ -24,13 +20,13 @@ ChartJS.register(
 );
 
 const ResultsSection = ({ analysisResult }) => {
-
-  if (!analysisResult)
+  if (!analysisResult) {
     return (
       <p className="text-center text-gray-500 text-lg mt-6">
         No analysis yet.
       </p>
     );
+  }
 
   const breakdown = analysisResult.breakdown || {
     normal: 0,
@@ -43,19 +39,13 @@ const ResultsSection = ({ analysisResult }) => {
     labels: ["Normal", "Repetition", "Prolongation", "Block"],
     datasets: [
       {
-        label: "Speech Breakdown",
         data: [
           breakdown.normal,
           breakdown.repetition,
           breakdown.prolongation,
           breakdown.block,
         ],
-        backgroundColor: [
-          "#4ade80",
-          "#fb7185",
-          "#fbbf24",
-          "#60a5fa",
-        ],
+        backgroundColor: ["#4ade80", "#fb7185", "#fbbf24", "#60a5fa"],
         borderWidth: 1,
       },
     ],
@@ -72,108 +62,115 @@ const ResultsSection = ({ analysisResult }) => {
           breakdown.prolongation,
           breakdown.block,
         ],
-        backgroundColor: [
-          "#4ade80",
-          "#fb7185",
-          "#fbbf24",
-          "#60a5fa",
-        ],
+        backgroundColor: ["#4ade80", "#fb7185", "#fbbf24", "#60a5fa"],
       },
     ],
   };
 
-  const handleDownload = () => {
-    const date = new Date().toLocaleString();
-    const report = `
-=============================
- STUTTER AI - ANALYSIS REPORT
-=============================
+  // ✅ TOKEN-SAFE DOWNLOAD
+  const handleDownload = async () => {
+    if (!analysisResult?._id) {
+      alert("Report not ready");
+      return;
+    }
 
-Date: ${date}
-File: ${analysisResult.filename || "N/A"}
+    const saved = localStorage.getItem("stutter_user_v1");
+    const token = saved ? JSON.parse(saved).token : null;
 
-Status: ${analysisResult.status}
-Confidence: ${analysisResult.confidence}%
+    if (!token) {
+      alert("Session expired. Please login again.");
+      return;
+    }
 
-Details:
-${analysisResult.details}
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/download-report/${analysisResult._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-Breakdown:
- - Normal: ${breakdown.normal}%
- - Repetition: ${breakdown.repetition}%
- - Prolongation: ${breakdown.prolongation}%
- - Block: ${breakdown.block}%
+      if (!res.ok) {
+        alert("Failed to download report");
+        return;
+      }
 
-Powered by STUTTER AI
-`;
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
 
-    const blob = new Blob([report], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `stutter_report_${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Stutter_AI_Report.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Error downloading report");
+    }
   };
 
   return (
-    <div className="mt-10 bg-white p-10 rounded-3xl shadow-2xl border border-purple-200 max-w-4xl mx-auto">
+    <div className="mt-12 max-w-5xl mx-auto bg-white p-10 rounded-3xl shadow-2xl border border-purple-200">
 
-      {/* Title */}
-      <h2 className="text-3xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 mb-6">
+      <h2 className="text-4xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
         Analysis Results
       </h2>
 
-      {/* Status */}
-      <p className="text-center text-xl font-semibold text-purple-600">
+      <p className="text-center text-xl font-semibold text-purple-600 mt-4">
         {analysisResult.status}
       </p>
 
-      {/* Confidence */}
-      <p className="text-center mt-2 text-white inline-block px-4 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow">
-        Confidence: {analysisResult.confidence}%
-      </p>
+      <div className="flex justify-center mt-3">
+        <span className="px-4 py-1 rounded-full text-white text-sm font-semibold bg-gradient-to-r from-indigo-500 to-purple-500 shadow">
+          Confidence: {analysisResult.confidence}%
+        </span>
+      </div>
 
-      {/* Details */}
-      <p className="text-center text-gray-600 mt-4">
+      <p className="text-center text-gray-600 mt-5 max-w-2xl mx-auto">
         {analysisResult.details}
       </p>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-12">
-
-        {/* Pie chart */}
         <div className="bg-white p-6 rounded-2xl shadow-md border border-purple-100">
-          <h3 className="text-center font-semibold text-purple-600 mb-3">
+          <h3 className="text-center font-semibold text-purple-600 mb-4">
             Breakdown Overview
           </h3>
-          <Pie data={pieData} />
+          <div className="h-[260px]">
+            <Pie data={pieData} options={{ maintainAspectRatio: false }} />
+          </div>
         </div>
 
-        {/* Bar chart */}
         <div className="bg-white p-6 rounded-2xl shadow-md border border-purple-100">
-          <h3 className="text-center font-semibold text-purple-600 mb-3">
+          <h3 className="text-center font-semibold text-purple-600 mb-4">
             Category Distribution
           </h3>
-          <Bar data={barData} />
+          <div className="h-[260px]">
+            <Bar
+              data={barData}
+              options={{
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100 } },
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Filename + timestamp */}
       <p className="text-center text-sm text-gray-500 mt-6">
         {analysisResult.filename} •{" "}
         {analysisResult.timestamp &&
           new Date(analysisResult.timestamp).toLocaleString()}
       </p>
 
-      {/* Only Download button now */}
       <div className="flex justify-center mt-8">
         <button
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold shadow hover:opacity-90"
           onClick={handleDownload}
+          className="px-8 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold shadow hover:opacity-90 transition"
         >
-          Download Report
+          Download Report (PDF)
         </button>
       </div>
 

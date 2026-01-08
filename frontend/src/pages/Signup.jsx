@@ -1,51 +1,59 @@
-// src/pages/Signup.jsx
 import React, { useState } from "react";
-import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
+import "../index.css";
 
 export default function Signup() {
-  const { signup } = useAuth();
   const navigate = useNavigate();
+  const { signup } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
-    const res = await signup(email, password);
+  const handleSignup = async () => {
+    setLoading(true);
+    const result = await signup(email, password);
+    setLoading(false);
 
-    if (res.success) {
-      toast.success("Signup successful");
+    if (result.success) {
+      alert("Account created. Please login.");
       navigate("/login");
     } else {
-      toast.error(res.message);
+      alert(result.message || "Signup failed");
     }
   };
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h2 className="text-2xl font-semibold mb-4">Create Account</h2>
+    <div className="auth-container">
+      <div className="auth-box">
+        <h1 className="auth-title">Create an Account</h1>
+        <p className="auth-sub">Sign up with email & password</p>
 
-      <input
-        value={email}
-        onChange={(e)=>setEmail(e.target.value)}
-        placeholder="Email"
-        className="w-full p-2 border rounded mb-3"
-      />
+        <input
+          type="email"
+          className="auth-input"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <input
-        value={password}
-        onChange={(e)=>setPassword(e.target.value)}
-        placeholder="Password"
-        type="password"
-        className="w-full p-2 border rounded mb-3"
-      />
+        <input
+          type="password"
+          className="auth-input"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-      <button
-        onClick={handleSubmit}
-        className="w-full py-2 bg-pink-500 text-white rounded"
-      >
-        Signup
-      </button>
+        <button className="auth-btn" onClick={handleSignup} disabled={loading}>
+          {loading ? "Creating account..." : "Sign Up"}
+        </button>
+
+        <p className="auth-footer">
+          Already have an account? <a href="/login">Login</a>
+        </p>
+      </div>
     </div>
   );
 }

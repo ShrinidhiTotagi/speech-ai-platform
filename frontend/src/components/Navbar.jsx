@@ -10,11 +10,11 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const menuRef = useRef();
-  const profileRef = useRef();
+  const menuRef = useRef(null);
+  const profileRef = useRef(null);
 
   useEffect(() => {
-    const close = (e) => {
+    const closeMenus = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMobileOpen(false);
       }
@@ -23,8 +23,8 @@ export default function Navbar() {
       }
     };
 
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    document.addEventListener("mousedown", closeMenus);
+    return () => document.removeEventListener("mousedown", closeMenus);
   }, []);
 
   const email = user?.email || null;
@@ -32,14 +32,14 @@ export default function Navbar() {
 
   return (
     <header className="navbar">
+      {/* LEFT */}
       <div className="navbar-left">
-        <Link to="/" className="brand-title">FluencyAssist</Link>
+        <Link to="/" className="brand-title">
+          Fluency<span>Assist</span>
+        </Link>
       </div>
 
-      <div className="hamburger" onClick={() => setMobileOpen(!mobileOpen)}>
-        <span></span><span></span><span></span>
-      </div>
-
+      {/* CENTER (DESKTOP) */}
       <nav className="navbar-center desktop-menu">
         <Link to="/" className="navbar-link">Analysis</Link>
         <Link to="/dashboard" className="navbar-link">Dashboard</Link>
@@ -48,6 +48,7 @@ export default function Navbar() {
         <Link to="/contact" className="navbar-link">Contact</Link>
       </nav>
 
+      {/* RIGHT */}
       <div className="navbar-right" ref={profileRef}>
         {!email ? (
           <>
@@ -67,20 +68,22 @@ export default function Navbar() {
               <div className="profile-popup">
                 <div className="profile-popup-header">
                   <div className="profile-popup-avatar">{avatar}</div>
-                  <div>
-                    <div className="profile-popup-name">{email}</div>
-                  </div>
+                  <div className="profile-popup-email" title={email}>
+  {email}
+</div>
+
                 </div>
 
-                <Link to="/profile" className="profile-popup-item">Profile</Link>
-                <Link to="/settings" className="profile-popup-item">Settings</Link>
-                <Link to="/help" className="profile-popup-item">Help</Link>
-                <Link to="/therapy" className="profile-popup-item">Therapy</Link>
+                <div className="profile-popup-links">
+                  <Link to="/profile" className="profile-popup-item">Profile</Link>
+                  <Link to="/settings" className="profile-popup-item">Settings</Link>
+                  <Link to="/help" className="profile-popup-item">Help</Link>
+                  <Link to="/therapy" className="profile-popup-item">Therapy</Link>
+                </div>
 
                 <button
                   className="profile-popup-logout"
                   onClick={() => {
-                    localStorage.removeItem("stutter_user_v1");
                     logout();
                     navigate("/login");
                   }}
@@ -91,6 +94,17 @@ export default function Navbar() {
             )}
           </>
         )}
+      </div>
+
+      {/* MOBILE MENU */}
+      <div
+        className="hamburger"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        ref={menuRef}
+      >
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
 
       {mobileOpen && (
@@ -114,7 +128,6 @@ export default function Navbar() {
               <button
                 className="mobile-logout"
                 onClick={() => {
-                  localStorage.removeItem("stutter_user_v1");
                   logout();
                   navigate("/login");
                 }}

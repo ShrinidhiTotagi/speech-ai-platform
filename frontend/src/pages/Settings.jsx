@@ -1,70 +1,79 @@
-// src/pages/Settings.jsx
-import React, { useState } from "react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import "../index.css";
 
 export default function Settings() {
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const [aiTips, setAiTips] = useState(true);
+  const navigate = useNavigate();
 
   return (
-    <div className="page-wrapper">
+    <div className="settings-wrapper">
 
-      {/* TITLE */}
-      <h1 className="page-title">Settings</h1>
-      <p className="highlight-sub">Customize your Stutter AI experience</p>
-
-      {/* CARD */}
-      <div className="settings-card-pro">
-
-        <div className="settings-row-pro">
-          <span>Email Alerts</span>
-          <label className="switch-pro">
-            <input
-              type="checkbox"
-              checked={emailAlerts}
-              onChange={() => setEmailAlerts(!emailAlerts)}
-            />
-            <span className="slider-pro"></span>
-          </label>
-        </div>
-
-        <div className="settings-row-pro">
-          <span>Dark Mode</span>
-          <label className="switch-pro">
-            <input
-              type="checkbox"
-              checked={darkMode}
-              onChange={() => setDarkMode(!darkMode)}
-            />
-            <span className="slider-pro"></span>
-          </label>
-        </div>
-
-        <div className="settings-row-pro">
-          <span>AI Suggestion Tips</span>
-          <label className="switch-pro">
-            <input
-              type="checkbox"
-              checked={aiTips}
-              onChange={() => setAiTips(!aiTips)}
-            />
-            <span className="slider-pro"></span>
-          </label>
-        </div>
-
-        <div className="settings-row-pro">
-          <span>Language</span>
-          <select className="settings-select-pro">
-            <option>English (US)</option>
-            <option>English (UK)</option>
-            <option>Hindi</option>
-            <option>Kannada</option>
-          </select>
-        </div>
-
+      {/* HEADER */}
+      <div className="settings-header">
+        <button className="settings-back" onClick={() => navigate(-1)}>←</button>
+        <h1>Settings</h1>
       </div>
 
+      {/* SETTINGS LIST */}
+      <div className="settings-list-card">
+
+        <SettingItem
+          icon="👤"
+          title="Account"
+          subtitle="Profile, email, login method"
+          onClick={() => navigate("/profile")}
+        />
+
+        <SettingItem
+          icon="🔔"
+          title="Notifications"
+          subtitle="Session updates & alerts"
+          onClick={() => navigate("/notifications")}
+        />
+
+        <SettingItem
+          icon="🔒"
+          title="Privacy & Security"
+          subtitle="Data usage & protection"
+          onClick={() => navigate("/privacy")}
+        />
+
+        <SettingItem
+          icon="💬"
+          title="Help & Support"
+          subtitle="FAQs and contact support"
+          onClick={() => navigate("/contact")}
+        />
+
+        <SettingItem
+          icon="ℹ️"
+          title="About"
+          subtitle="FluencyAssist information"
+          onClick={() => navigate("/about")}
+          last
+        />
+
+      </div>
+    </div>
+  );
+}
+
+/* SINGLE ROW COMPONENT */
+function SettingItem({ icon, title, subtitle, onClick, last }) {
+  return (
+    <div
+      className={`settings-item ${last ? "last" : ""}`}
+      onClick={onClick}
+    >
+      <div className="settings-item-left">
+        <span className="settings-icon">{icon}</span>
+        <div>
+          <div className="settings-title">{title}</div>
+          <div className="settings-subtitle">{subtitle}</div>
+        </div>
+      </div>
+
+      <div className="settings-arrow">›</div>
     </div>
   );
 }

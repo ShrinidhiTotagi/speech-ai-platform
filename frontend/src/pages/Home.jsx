@@ -177,10 +177,14 @@ export default function Home() {
             {/* Uploader */}
             <div className="p-8 bg-white rounded-2xl shadow-lg border border-purple-100">
               <AudioUploader
-                onFileSelected={onFileSelected}
-                selectedFile={selectedFile}
-                authorizeStart={() => ensureLoginThen(() => true)}
-              />
+  onFileSelected={onFileSelected}
+  onFileRemoved={() => {
+    setAnalysisResult(null);
+    setSelectedFile(null);
+  }}
+  authorizeStart={() => ensureLoginThen(() => true)}
+/>
+
             </div>
 
           </div>
