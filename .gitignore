@@ -8,6 +8,9 @@ dist/
 .venv/
 __pycache__/
 *.pyc
+backend/.env
+backend/reports/
+backend/uploads/
 
 # OS
 .DS_Store
