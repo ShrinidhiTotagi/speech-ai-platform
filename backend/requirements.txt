@@ -1,11 +1,9 @@
 fastapi
 uvicorn[standard]
-transformers
-torchaudio
 soundfile
 librosa
 numpy
-pydantic
+pydantic[email]
 python-multipart
 pymongo
 gunicorn
@@ -14,3 +12,8 @@ bcrypt
 python-dotenv
 python-jose[cryptography]
 passlib[bcrypt]
+google-auth
+reportlab
+torch
+ffmpeg-python
+imageio[ffmpeg]

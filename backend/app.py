@@ -52,12 +52,17 @@ else:
 # ================= FASTAPI APP =================
 app = FastAPI()
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+if os.environ.get("FRONTEND_URL"):
+    ALLOWED_ORIGINS.append(os.environ.get("FRONTEND_URL"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

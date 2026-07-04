@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: fluencyassist-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DBNAME
+        value: stutterDB
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SMTP_EMAIL
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: MODEL_PATH
+        value: ./models/model_epoch10.pth
+      - key: DEVICE
+        value: cpu
+      - key: FRONTEND_URL
+        sync: false
