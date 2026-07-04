@@ -11,14 +11,14 @@ import {
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
+const COLORS = ["#34d399", "#fb7185", "#a78bfa", "#facc15"];
+
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const COLORS = ["#34d399", "#fb7185", "#a78bfa", "#facc15"];
 
   useEffect(() => {
     if (!user) {
@@ -27,7 +27,7 @@ export default function Dashboard() {
       return;
     }
     loadHistory();
-  }, []);
+  }, [user, navigate]);
 
   const loadHistory = async () => {
     try {

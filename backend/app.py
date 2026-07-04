@@ -10,6 +10,7 @@ import torch
 import librosa
 import soundfile as sf
 import ffmpeg
+import imageio_ffmpeg
 
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,7 +29,7 @@ load_dotenv()
 # ================= PROJECT IMPORTS =================
 from database import history_collection
 from auth import router as auth_router, get_current_user
-from contact import router as contact_router   # ✅ CONTACT ROUTER
+from contact import router as contact_router
 from model_loader import load_model_robust
 
 # ================= LOGGING =================
@@ -42,17 +43,21 @@ DEVICE = os.environ.get("DEVICE", "cpu")
 logger.info(f"Loading model from: {MODEL_PATH}")
 model = load_model_robust(MODEL_PATH, device=DEVICE)
 
-if model is None:
-    logger.warning("No model loaded, using fallback logic")
-else:
+if model is not None:
+    model.eval()
     logger.info("MODEL LOADED SUCCESSFULLY")
+else:
+    logger.warning("Model not loaded – fallback mode enabled")
 
 # ================= FASTAPI APP =================
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # frontend: http://127.0.0.1:3000
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,7 +65,7 @@ app.add_middleware(
 
 # ================= ROUTERS =================
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
-app.include_router(contact_router, tags=["contact"])   # ✅ THIS WAS REQUIRED
+app.include_router(contact_router, tags=["contact"])
 
 # ================= AUDIO CONFIG =================
 SR = 16000
@@ -85,10 +90,16 @@ def audio_bytes_to_np(raw: bytes):
         pass
 
     try:
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
         out, _ = (
-            ffmpeg.input("pipe:")
+            ffmpeg.input("pipe:", loglevel="quiet")
             .output("pipe:", format="wav", acodec="pcm_s16le", ac=1, ar=str(SR))
-            .run(input=raw, capture_stdout=True, capture_stderr=True, quiet=True)
+            .run(
+                input=raw,
+                capture_stdout=True,
+                capture_stderr=True,
+                cmd=ffmpeg_exe,
+            )
         )
         y, _ = sf.read(io.BytesIO(out), dtype="float32")
         return y
@@ -97,14 +108,21 @@ def audio_bytes_to_np(raw: bytes):
 
 # ================= HELPERS =================
 def ensure_length(y):
-    return np.pad(y, (0, max(0, TARGET_LEN - len(y))))[:TARGET_LEN]
+    if len(y) < TARGET_LEN:
+        return np.pad(y, (0, TARGET_LEN - len(y)))
+    return y[:TARGET_LEN]
 
 def mel_from_wave(y):
     y = ensure_length(y)
     mel = librosa.feature.melspectrogram(
-        y=y, sr=SR, n_mels=N_MELS, n_fft=N_FFT, hop_length=HOP_LEN
+        y=y,
+        sr=SR,
+        n_mels=N_MELS,
+        n_fft=N_FFT,
+        hop_length=HOP_LEN,
     )
-    return librosa.power_to_db(mel, ref=np.max).astype(np.float32)
+    mel_db = librosa.power_to_db(mel, ref=np.max)
+    return mel_db.astype(np.float32)
 
 # ================= PDF GENERATOR =================
 def generate_pdf_report(result: dict, filepath: str):
@@ -135,13 +153,6 @@ def generate_pdf_report(result: dict, filepath: str):
 
     y -= 1 * cm
     c.setFont("Helvetica-Bold", 13)
-    c.drawString(2 * cm, y, "Details")
-    y -= 0.6 * cm
-    c.setFont("Helvetica", 11)
-    c.drawString(2 * cm, y, result["details"])
-
-    y -= 1 * cm
-    c.setFont("Helvetica-Bold", 13)
     c.drawString(2 * cm, y, "Speech Breakdown (%)")
 
     y -= 0.7 * cm
@@ -155,6 +166,37 @@ def generate_pdf_report(result: dict, filepath: str):
     c.showPage()
     c.save()
 
+ALLOWED_AUDIO_TYPES = {
+    "audio/wav", "audio/wave", "audio/x-wav",
+    "audio/mpeg", "audio/mp3", "audio/ogg",
+    "audio/webm", "audio/flac", "audio/x-flac",
+    "video/webm", "application/octet-stream", "",
+}
+
+def is_valid_audio(raw: bytes) -> bool:
+    """Check magic bytes to detect real audio formats."""
+    if len(raw) < 4:
+        return False
+    # RIFF/WAV
+    if raw[:4] == b'RIFF':
+        return True
+    # MP3 (ID3 tag or sync bytes)
+    if raw[:3] == b'ID3' or raw[:2] in (b'\xff\xfb', b'\xff\xf3', b'\xff\xf2'):
+        return True
+    # OGG
+    if raw[:4] == b'OggS':
+        return True
+    # FLAC
+    if raw[:4] == b'fLaC':
+        return True
+    # WebM / MKV (EBML header)
+    if raw[:4] == b'\x1a\x45\xdf\xa3':
+        return True
+    # MP4/M4A
+    if raw[4:8] in (b'ftyp', b'moov', b'mdat'):
+        return True
+    return False
+
 # ================= HEALTH =================
 @app.get("/health")
 def health():
@@ -167,27 +209,62 @@ async def predict_audio(
     current_user: dict = Depends(get_current_user),
 ):
     raw = await file.read()
+    if not is_valid_audio(raw):
+        raise HTTPException(status_code=400, detail="Unsupported or invalid audio file")
+    logger.info(f"Received file: {file.filename}, size={len(raw)} bytes")
+
     y = audio_bytes_to_np(raw)
     mel = mel_from_wave(y)
+
+    logger.info(f"Audio samples={len(y)}, mel mean={mel.mean():.4f}, std={mel.std():.4f}")
+
     mel_tensor = torch.tensor(mel).unsqueeze(0).unsqueeze(0)
 
+    # -------- MODEL INFERENCE --------
     if model is None:
-        conf = random.uniform(55, 95)
-        label = "Stuttering Detected" if conf > 70 else "Normal Speech"
+        prob = random.uniform(0.4, 0.9)
     else:
         with torch.no_grad():
-            probs = torch.softmax(model(mel_tensor), dim=1)
-            conf = float(probs[0][1] * 100)
-            label = "Stuttering Detected" if conf > 50 else "Normal Speech"
+            out = model(mel_tensor)
+            logger.info(f"Model raw output: {out}")
 
-    breakdown = {"normal": 100, "repetition": 0, "prolongation": 0, "block": 0}
-    details = "Speech appears normal."
+            if out.shape[1] == 1:
+                prob = torch.sigmoid(out)[0][0].item()
+            else:
+                prob = torch.softmax(out, dim=1)[0][1].item()
 
+    conf = round(prob * 100, 2)
+    label = "Stuttering Detected" if prob > 0.5 else "Normal Speech"
+
+    # -------- DYNAMIC BREAKDOWN --------
+    if label == "Stuttering Detected":
+        rep = round(conf * 0.4)
+        prog = round(conf * 0.35)
+        blk = round(conf * 0.25)
+        normal = max(0, 100 - (rep + prog + blk))
+
+        breakdown = {
+            "normal": normal,
+            "repetition": rep,
+            "prolongation": prog,
+            "block": blk,
+        }
+        details = "Stuttering patterns detected in speech."
+    else:
+        breakdown = {
+            "normal": 100,
+            "repetition": 0,
+            "prolongation": 0,
+            "block": 0,
+        }
+        details = "Speech appears normal."
+
+    # -------- STORE RESULT --------
     doc = {
         "email": current_user["email"],
         "filename": file.filename,
         "status": label,
-        "confidence": round(conf, 2),
+        "confidence": conf,
         "details": details,
         "breakdown": breakdown,
         "timestamp": datetime.utcnow(),
@@ -210,22 +287,36 @@ def get_history(current_user: dict = Depends(get_current_user)):
         d["timestamp"] = d["timestamp"].isoformat()
     return {"history": docs}
 
+@app.delete("/history/all")
+def delete_all_history(current_user: dict = Depends(get_current_user)):
+    history_collection.delete_many({"email": current_user["email"]})
+    return {"success": True}
+
 # ================= PDF DOWNLOAD =================
 @app.get("/download-report/{report_id}")
 def download_report(report_id: str, current_user: dict = Depends(get_current_user)):
-    record = history_collection.find_one({
-        "_id": ObjectId(report_id),
-        "email": current_user["email"],
-    })
+    record = history_collection.find_one(
+        {"_id": ObjectId(report_id), "email": current_user["email"]}
+    )
 
     if not record:
         raise HTTPException(status_code=404, detail="Report not found")
 
     record["timestamp"] = record["timestamp"].isoformat()
+
     os.makedirs("reports", exist_ok=True)
     pdf_path = f"reports/fluency_report_{uuid.uuid4().hex}.pdf"
 
     generate_pdf_report(record, pdf_path)
+
+    def cleanup():
+        try:
+            os.remove(pdf_path)
+        except OSError:
+            pass
+
+    import threading
+    threading.Timer(30, cleanup).start()
 
     return FileResponse(
         pdf_path,

@@ -1,6 +1,4 @@
 # backend/auth.py
-print("******** USING THIS AUTH.PY ********")
-
 import os
 import hashlib
 import base64
@@ -30,6 +28,7 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 class SignupIn(BaseModel):
     email: EmailStr
     password: str
+    name: str = ""
 
 class LoginIn(BaseModel):
     email: EmailStr
@@ -70,12 +69,16 @@ def get_current_user(authorization: str = Header(None)):
 # ================= AUTH =================
 @router.post("/signup")
 def signup(payload: SignupIn):
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
     if users_collection.find_one({"email": payload.email}):
         raise HTTPException(status_code=400, detail="Email already exists")
 
     users_collection.insert_one({
         "email": payload.email,
         "password": hash_password(payload.password),
+        "name": payload.name,
         "created_at": datetime.utcnow(),
         "settings": {
             "darkMode": False,
@@ -104,13 +107,10 @@ def google_auth(payload: GoogleAuthIn):
         info = id_token.verify_oauth2_token(
             payload.token,
             google_requests.Request(),
-            audience=None
+            audience=GOOGLE_CLIENT_ID
         )
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid Google token")
-
-    if info.get("aud") != GOOGLE_CLIENT_ID and info.get("azp") != GOOGLE_CLIENT_ID:
-        raise HTTPException(status_code=401, detail="Client ID mismatch")
 
     email = info.get("email")
     if not email:
@@ -149,5 +149,46 @@ def update_settings(settings: dict, user=Depends(get_current_user)):
     users_collection.update_one(
         {"email": user["email"]},
         {"$set": {"settings": settings}}
+    )
+    return {"success": True}
+
+# ================= PROFILE =================
+class ProfileUpdateIn(BaseModel):
+    name: str
+
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.get("/profile")
+def get_profile(user=Depends(get_current_user)):
+    u = users_collection.find_one({"email": user["email"]})
+    return {
+        "email": u["email"],
+        "name": u.get("name", ""),
+        "created_at": u["created_at"].isoformat() if u.get("created_at") else None,
+        "provider": u.get("provider", "password"),
+    }
+
+@router.put("/profile")
+def update_profile(payload: ProfileUpdateIn, user=Depends(get_current_user)):
+    users_collection.update_one(
+        {"email": user["email"]},
+        {"$set": {"name": payload.name}}
+    )
+    return {"success": True}
+
+@router.put("/change-password")
+def change_password(payload: ChangePasswordIn, user=Depends(get_current_user)):
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    u = users_collection.find_one({"email": user["email"]})
+    if not u.get("password"):
+        raise HTTPException(status_code=400, detail="Cannot change password for Google accounts")
+    if not verify_password(payload.current_password, u["password"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    users_collection.update_one(
+        {"email": user["email"]},
+        {"$set": {"password": hash_password(payload.new_password)}}
     )
     return {"success": True}

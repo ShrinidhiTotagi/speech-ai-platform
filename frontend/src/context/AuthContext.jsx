@@ -10,7 +10,7 @@ import { jwtDecode } from "jwt-decode";
 const AuthContext = createContext();
 
 const API_BASE =
-  process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
+  process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -38,12 +38,12 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   // ================= EMAIL SIGNUP =================
-  const signup = async (email, password) => {
+  const signup = async (email, password, name = "") => {
     try {
       const res = await fetch(`${API_BASE}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, name }),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -92,18 +92,11 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ================= GOOGLE LOGIN (REAL FIX) =================
-  const googleLogin = (googleJwt, backendToken) => {
+  // ================= GOOGLE LOGIN =================
+  const googleLogin = (backendToken) => {
     try {
-      const decoded = jwtDecode(googleJwt);
-
-      const userObj = {
-        email: decoded.email,
-        token: backendToken, // 🔥 IMPORTANT: backend JWT
-        provider: "google",
-      };
-
-      setUser(userObj);
+      const decoded = jwtDecode(backendToken);
+      setUser({ email: decoded.email, token: backendToken, provider: "google" });
     } catch (err) {
       console.error("Google JWT decode failed", err);
     }
