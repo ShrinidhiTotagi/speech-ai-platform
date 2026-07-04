@@ -8,7 +8,7 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-grid">
         <div>
-          <div className="footer-title">Stutter AI</div>
+          <div className="footer-title">FluencyAssist</div>
           <div className="footer-text">Smart speech analysis & therapy tools</div>
         </div>
 
