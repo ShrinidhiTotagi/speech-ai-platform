@@ -60,6 +60,9 @@ ALLOWED_ORIGINS = [
 if os.environ.get("FRONTEND_URL"):
     ALLOWED_ORIGINS.append(os.environ.get("FRONTEND_URL"))
 
+print("FRONTEND_URL =", os.environ.get("FRONTEND_URL"))
+print("ALLOWED_ORIGINS =", ALLOWED_ORIGINS)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
