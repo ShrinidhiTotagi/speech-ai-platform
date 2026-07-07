@@ -213,51 +213,64 @@ async def predict_audio(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
 ):
-    logger.info("Step 1: Start prediction")
+    logger.info("========== PREDICT REQUEST START ==========")
 
+    # -------- Read File --------
+    logger.info("Step 1: Reading uploaded file")
     raw = await file.read()
 
-    logger.info("Step 2: Audio received")
+    logger.info(f"Step 2: File received -> {file.filename}")
+    logger.info(f"File size: {len(raw)} bytes")
 
     if not is_valid_audio(raw):
-        raise HTTPException(status_code=400, detail="Unsupported or invalid audio file")
+        logger.error("Invalid audio file")
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported or invalid audio file",
+        )
 
-    logger.info(f"Received file: {file.filename}, size={len(raw)} bytes")
-
+    # -------- Decode --------
     logger.info("Step 3: Decoding audio")
     y = audio_bytes_to_np(raw)
+    logger.info(f"Step 4: Audio decoded successfully. Samples={len(y)}")
 
-    logger.info("Step 4: Audio decoded")
-
+    # -------- Mel Spectrogram --------
+    logger.info("Step 5: Creating Mel Spectrogram")
     mel = mel_from_wave(y)
 
-    logger.info("Step 5: Mel spectrogram created")
+    logger.info(
+        f"Step 6: Mel created. Shape={mel.shape}, Mean={mel.mean():.4f}, Std={mel.std():.4f}"
+    )
 
+    # -------- Tensor --------
+    logger.info("Step 7: Creating Tensor")
     mel_tensor = torch.tensor(mel).unsqueeze(0).unsqueeze(0)
 
-    logger.info("Step 6: Running model")
+    logger.info(f"Tensor Shape = {mel_tensor.shape}")
 
-    # your existing model inference code stays exactly the same
+    # -------- Model --------
+    logger.info("Step 8: Starting Model Inference")
 
-    logger.info("Step 7: Model inference completed")
-
-    # -------- MODEL INFERENCE --------
     if model is None:
+        logger.warning("Model is None -> Using fallback prediction")
         prob = random.uniform(0.4, 0.9)
     else:
         with torch.no_grad():
             out = model(mel_tensor)
-            logger.info(f"Model raw output: {out}")
+
+            logger.info(f"Step 9: Model Output = {out}")
 
             if out.shape[1] == 1:
                 prob = torch.sigmoid(out)[0][0].item()
             else:
                 prob = torch.softmax(out, dim=1)[0][1].item()
 
+    logger.info(f"Step 10: Probability = {prob}")
+
     conf = round(prob * 100, 2)
     label = "Stuttering Detected" if prob > 0.5 else "Normal Speech"
 
-    # -------- DYNAMIC BREAKDOWN --------
+    # -------- Breakdown --------
     if label == "Stuttering Detected":
         rep = round(conf * 0.4)
         prog = round(conf * 0.35)
@@ -270,6 +283,7 @@ async def predict_audio(
             "prolongation": prog,
             "block": blk,
         }
+
         details = "Stuttering patterns detected in speech."
     else:
         breakdown = {
@@ -278,8 +292,33 @@ async def predict_audio(
             "prolongation": 0,
             "block": 0,
         }
+
         details = "Speech appears normal."
 
+    logger.info("Step 11: Saving to MongoDB")
+
+    doc = {
+        "email": current_user["email"],
+        "filename": file.filename,
+        "status": label,
+        "confidence": conf,
+        "details": details,
+        "breakdown": breakdown,
+        "timestamp": datetime.utcnow(),
+    }
+
+    res = history_collection.insert_one(doc)
+
+    logger.info("Step 12: Saved Successfully")
+
+    doc["_id"] = str(res.inserted_id)
+    doc["timestamp"] = doc["timestamp"].isoformat()
+
+    logger.info("========== PREDICT REQUEST COMPLETED ==========")
+
+    return {
+        "result": doc
+    }
     # -------- STORE RESULT --------
     doc = {
         "email": current_user["email"],
