@@ -213,17 +213,33 @@ async def predict_audio(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
 ):
+    logger.info("Step 1: Start prediction")
+
     raw = await file.read()
+
+    logger.info("Step 2: Audio received")
+
     if not is_valid_audio(raw):
         raise HTTPException(status_code=400, detail="Unsupported or invalid audio file")
+
     logger.info(f"Received file: {file.filename}, size={len(raw)} bytes")
 
+    logger.info("Step 3: Decoding audio")
     y = audio_bytes_to_np(raw)
+
+    logger.info("Step 4: Audio decoded")
+
     mel = mel_from_wave(y)
 
-    logger.info(f"Audio samples={len(y)}, mel mean={mel.mean():.4f}, std={mel.std():.4f}")
+    logger.info("Step 5: Mel spectrogram created")
 
     mel_tensor = torch.tensor(mel).unsqueeze(0).unsqueeze(0)
+
+    logger.info("Step 6: Running model")
+
+    # your existing model inference code stays exactly the same
+
+    logger.info("Step 7: Model inference completed")
 
     # -------- MODEL INFERENCE --------
     if model is None:
