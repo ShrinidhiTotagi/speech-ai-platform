@@ -117,8 +117,16 @@ def ensure_length(y):
         return np.pad(y, (0, TARGET_LEN - len(y)))
     return y[:TARGET_LEN]
 
+# ================= MEL SPECTROGRAM =================
 def mel_from_wave(y):
+    logger.info("Mel Step 1: ensure_length()")
+
     y = ensure_length(y)
+
+    logger.info(f"Audio Length = {len(y)}")
+
+    logger.info("Mel Step 2: Creating Mel Spectrogram")
+
     mel = librosa.feature.melspectrogram(
         y=y,
         sr=SR,
@@ -126,9 +134,18 @@ def mel_from_wave(y):
         n_fft=N_FFT,
         hop_length=HOP_LEN,
     )
-    mel_db = librosa.power_to_db(mel, ref=np.max)
-    return mel_db.astype(np.float32)
 
+    logger.info("Mel Step 3: Mel Spectrogram Created")
+
+    mel_db = librosa.power_to_db(mel, ref=np.max)
+
+    logger.info("Mel Step 4: Converted to dB")
+
+    mel_db = mel_db.astype(np.float32)
+
+    logger.info("Mel Step 5: Returning Mel")
+
+    return mel_db
 # ================= PDF GENERATOR =================
 def generate_pdf_report(result: dict, filepath: str):
     c = canvas.Canvas(filepath, pagesize=A4)
@@ -236,15 +253,20 @@ async def predict_audio(
 
     # -------- Mel Spectrogram --------
     logger.info("Step 5: Creating Mel Spectrogram")
+
     mel = mel_from_wave(y)
 
-    logger.info(
-        f"Step 6: Mel created. Shape={mel.shape}, Mean={mel.mean():.4f}, Std={mel.std():.4f}"
-    )
+    logger.info("Step 6: Mel Spectrogram Created")
+    logger.info(f"Mel Shape = {mel.shape}")
 
-    # -------- Tensor --------
+        # -------- Tensor --------
     logger.info("Step 7: Creating Tensor")
-    mel_tensor = torch.tensor(mel).unsqueeze(0).unsqueeze(0)
+
+    mel_tensor = torch.from_numpy(mel).float()
+
+    logger.info(f"Tensor Before Unsqueeze = {mel_tensor.shape}")
+
+    mel_tensor = mel_tensor.unsqueeze(0).unsqueeze(0)
 
     logger.info(f"Tensor Shape = {mel_tensor.shape}")
 
@@ -252,18 +274,19 @@ async def predict_audio(
     logger.info("Step 8: Starting Model Inference")
 
     if model is None:
-        logger.warning("Model is None -> Using fallback prediction")
+        logger.warning("Model Missing -> Using Random Prediction")
         prob = random.uniform(0.4, 0.9)
     else:
         with torch.no_grad():
             out = model(mel_tensor)
 
-            logger.info(f"Step 9: Model Output = {out}")
+        logger.info("Step 9: Model Finished")
+        logger.info(f"Raw Output = {out}")
 
-            if out.shape[1] == 1:
-                prob = torch.sigmoid(out)[0][0].item()
-            else:
-                prob = torch.softmax(out, dim=1)[0][1].item()
+        if out.shape[1] == 1:
+            prob = torch.sigmoid(out)[0][0].item()
+        else:
+            prob = torch.softmax(out, dim=1)[0][1].item()
 
     logger.info(f"Step 10: Probability = {prob}")
 
@@ -319,76 +342,3 @@ async def predict_audio(
     return {
         "result": doc
     }
-    # -------- STORE RESULT --------
-    doc = {
-        "email": current_user["email"],
-        "filename": file.filename,
-        "status": label,
-        "confidence": conf,
-        "details": details,
-        "breakdown": breakdown,
-        "timestamp": datetime.utcnow(),
-    }
-
-    res = history_collection.insert_one(doc)
-    doc["_id"] = str(res.inserted_id)
-    doc["timestamp"] = doc["timestamp"].isoformat()
-
-    return {"result": doc}
-
-# ================= HISTORY =================
-@app.get("/history")
-def get_history(current_user: dict = Depends(get_current_user)):
-    docs = list(
-        history_collection.find({"email": current_user["email"]}).sort("timestamp", -1)
-    )
-    for d in docs:
-        d["_id"] = str(d["_id"])
-        d["timestamp"] = d["timestamp"].isoformat()
-    return {"history": docs}
-
-@app.delete("/history/all")
-def delete_all_history(current_user: dict = Depends(get_current_user)):
-    history_collection.delete_many({"email": current_user["email"]})
-    return {"success": True}
-
-# ================= PDF DOWNLOAD =================
-@app.get("/download-report/{report_id}")
-def download_report(report_id: str, current_user: dict = Depends(get_current_user)):
-    record = history_collection.find_one(
-        {"_id": ObjectId(report_id), "email": current_user["email"]}
-    )
-
-    if not record:
-        raise HTTPException(status_code=404, detail="Report not found")
-
-    record["timestamp"] = record["timestamp"].isoformat()
-
-    os.makedirs("reports", exist_ok=True)
-    pdf_path = f"reports/fluency_report_{uuid.uuid4().hex}.pdf"
-
-    generate_pdf_report(record, pdf_path)
-
-    def cleanup():
-        try:
-            os.remove(pdf_path)
-        except OSError:
-            pass
-
-    import threading
-    threading.Timer(30, cleanup).start()
-
-    return FileResponse(
-        pdf_path,
-        media_type="application/pdf",
-        filename="Fluency_Assist_Report.pdf",
-    )
-
-# ================= RUN =================
-if __name__ == "__main__":
-    uvicorn.run(
-        "app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-    )
